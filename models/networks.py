@@ -5,7 +5,7 @@ import torch.nn as nn
 import functools
 from torch.autograd import Variable
 import numpy as np
-
+import pdb
 ###############################################################################
 # Functions
 ###############################################################################
@@ -188,7 +188,6 @@ class GlobalGenerator(nn.Module):
         assert(n_blocks >= 0)
         super(GlobalGenerator, self).__init__()        
         activation = nn.ReLU(True)        
-
         model = [nn.ReflectionPad2d(3), nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0), norm_layer(ngf), activation]
         ### downsample
         for i in range(n_downsampling):

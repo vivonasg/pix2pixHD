@@ -112,8 +112,8 @@ class Pix2PixHDModel(BaseModel):
             oneHot_size = (size[0], self.opt.label_nc, size[2], size[3])
             input_label = torch.cuda.FloatTensor(torch.Size(oneHot_size)).zero_()
             input_label = input_label.scatter_(1, label_map.data.long().cuda(), 1.0)
-            if self.opt.data_type==16:
-                input_label = input_label.half()
+            #if self.opt.data_type==16:
+            #    input_label = input_label.half()
 
         # get edges from instance map
         if not self.opt.no_instance:
@@ -216,8 +216,8 @@ class Pix2PixHDModel(BaseModel):
                 idx = (inst == i).nonzero()
                 for k in range(self.opt.feat_num):                                    
                     feat_map[idx[:,0], idx[:,1] + k, idx[:,2], idx[:,3]] = feat[cluster_idx, k]
-        if self.opt.data_type==16:
-            feat_map = feat_map.half()
+        #if self.opt.data_type==16:
+        #   feat_map = feat_map.half()
         return feat_map
 
     def encode_features(self, image, inst):
@@ -248,10 +248,10 @@ class Pix2PixHDModel(BaseModel):
         edge[:,:,:,:-1] = edge[:,:,:,:-1] | (t[:,:,:,1:] != t[:,:,:,:-1])
         edge[:,:,1:,:] = edge[:,:,1:,:] | (t[:,:,1:,:] != t[:,:,:-1,:])
         edge[:,:,:-1,:] = edge[:,:,:-1,:] | (t[:,:,1:,:] != t[:,:,:-1,:])
-        if self.opt.data_type==16:
-            return edge.half()
-        else:
-            return edge.float()
+        #if self.opt.data_type==16:
+        #   return edge.half()
+        #else:
+        return edge.float()
 
     def save(self, which_epoch):
         self.save_network(self.netG, 'G', which_epoch, self.gpu_ids)

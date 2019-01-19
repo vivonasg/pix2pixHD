@@ -32,8 +32,11 @@ def get_params(opt, size):
     flip = random.random() > 0.5
     return {'crop_pos': (x, y), 'flip': flip}
 
-def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
+def get_transform(opt, params, method=Image.BICUBIC, normalize=False):
     transform_list = []
+    #if 'size' in opt.data_transform:
+    if 'seams' in opt.resize_or_crop:
+        transform_list.append(transforms.Lambda(lambda img:__flip_concat(img)))
     if 'resize' in opt.resize_or_crop:
         osize = [opt.loadSize, opt.loadSize]
         transform_list.append(transforms.Scale(osize, method))   
@@ -47,8 +50,9 @@ def get_transform(opt, params, method=Image.BICUBIC, normalize=True):
         base = float(2 ** opt.n_downsample_global)
         if opt.netG == 'local':
             base *= (2 ** opt.n_local_enhancers)
+        pdb.set_trace()
         transform_list.append(transforms.Lambda(lambda img: __make_power_2(img, base, method)))
-
+        pdb.set_trace()
     if opt.isTrain and not opt.no_flip:
         transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
 
@@ -90,3 +94,10 @@ def __flip(img, flip):
     if flip:
         return img.transpose(Image.FLIP_LEFT_RIGHT)
     return img
+
+def __flip_concat(img):
+    A=img
+    B=np.array(img.transpose(Image.FLIP_LEFT_RIGHT))
+
+    return Image.fromarray(np.concatenate((A,B),axis=1).astype('uint8'),'RGB')
+    return A

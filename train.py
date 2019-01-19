@@ -11,7 +11,11 @@ import os
 import numpy as np
 import torch
 from torch.autograd import Variable
+from tensorboardX import SummaryWriter
+import pdb
 
+torch.cuda.set_device(1)
+writer=SummaryWriter()
 opt = TrainOptions().parse()
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
@@ -44,30 +48,59 @@ display_delta = total_steps % opt.display_freq
 print_delta = total_steps % opt.print_freq
 save_delta = total_steps % opt.save_latest_freq
 
+
+
 for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
+    
     epoch_start_time = time.time()
     if epoch != start_epoch:
         epoch_iter = epoch_iter % dataset_size
     for i, data in enumerate(dataset, start=epoch_iter):
+        
+        
         iter_start_time = time.time()
         total_steps += opt.batchSize
         epoch_iter += opt.batchSize
-
         # whether to collect output images
         save_fake = total_steps % opt.display_freq == display_delta
+        
 
         ############## Forward Pass ######################
+        
+        
+        
+        
+        writer.add_image('data/label',data['label'],i)
+        
+        #pdb.set_trace()
+        writer.add_image('data/gt',((data['image']+1)/2)*255,i)
+        
+        
+        
+        if False:
+            with writer as w: 
+                w.add_graph(model,(Variable(data['label']), Variable(data['inst']),Variable(data['image']), Variable(data['feat']),True))
+        
+        
+        
         losses, generated = model(Variable(data['label']), Variable(data['inst']), 
-            Variable(data['image']), Variable(data['feat']), infer=save_fake)
-
+            Variable(data['image']), Variable(data['feat']), infer=True )
+        writer.add_image('data/gt',((generated+1)/2)*255,i)
         # sum per device losses
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
 
+        
         # calculate final loss scalar
         loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
         loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0)
 
+        writer.add_scalar('data/D_fake',loss_dict['D_fake'],i)
+        writer.add_scalar('data/D_real',loss_dict['D_real'],i)
+        writer.add_scalar('data/G_GAN',loss_dict['G_GAN'],i)
+        writer.add_scalar('data/G_GAN_Feat',loss_dict['G_GAN_Feat'],i)
+        writer.add_scalar('data/G_VGG',loss_dict['G_VGG'],i)
+        
         ############### Backward Pass ####################
         # update generator weights
         model.module.optimizer_G.zero_grad()
