@@ -14,9 +14,10 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 import pdb
 
-torch.cuda.set_device(1)
+
 writer=SummaryWriter()
 opt = TrainOptions().parse()
+torch.cuda.set_device(opt.gpu)
 iter_path = os.path.join(opt.checkpoints_dir, opt.name, 'iter.txt')
 if opt.continue_train:
     try:
@@ -70,10 +71,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         
         
         
-        writer.add_image('data/label',data['label'],i)
-        
-        #pdb.set_trace()
-        writer.add_image('data/gt',((data['image']+1)/2)*255,i)
+
         
         
         
@@ -85,7 +83,7 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         
         losses, generated = model(Variable(data['label']), Variable(data['inst']), 
             Variable(data['image']), Variable(data['feat']), infer=True )
-        writer.add_image('data/gt',((generated+1)/2)*255,i)
+
         # sum per device losses
         losses = [ torch.mean(x) if not isinstance(x, int) else x for x in losses ]
         loss_dict = dict(zip(model.module.loss_names, losses))
@@ -94,12 +92,16 @@ for epoch in range(start_epoch, opt.niter + opt.niter_decay + 1):
         # calculate final loss scalar
         loss_D = (loss_dict['D_fake'] + loss_dict['D_real']) * 0.5
         loss_G = loss_dict['G_GAN'] + loss_dict.get('G_GAN_Feat',0) + loss_dict.get('G_VGG',0)
-
-        writer.add_scalar('data/D_fake',loss_dict['D_fake'],i)
-        writer.add_scalar('data/D_real',loss_dict['D_real'],i)
-        writer.add_scalar('data/G_GAN',loss_dict['G_GAN'],i)
-        writer.add_scalar('data/G_GAN_Feat',loss_dict['G_GAN_Feat'],i)
-        writer.add_scalar('data/G_VGG',loss_dict['G_VGG'],i)
+        
+        if i%opt.log_freq==0:
+            writer.add_image('data/label',data['label'],i)
+            writer.add_image('data/gt',((data['image']+1)/2)*255,i)
+            writer.add_image('data/infer',((generated+1)/2)*255,i)
+            writer.add_scalar('data/D_fake',loss_dict['D_fake'],i)
+            writer.add_scalar('data/D_real',loss_dict['D_real'],i)
+            writer.add_scalar('data/G_GAN',loss_dict['G_GAN'],i)
+            writer.add_scalar('data/G_GAN_Feat',loss_dict['G_GAN_Feat'],i)
+            writer.add_scalar('data/G_VGG',loss_dict['G_VGG'],i)
         
         ############### Backward Pass ####################
         # update generator weights
